@@ -1,1 +1,1 @@
-# third-sem-practice-wiki
+# third-sem-practice
