@@ -1,0 +1,297 @@
+% !TEX TS-program = xelatex
+% !BIB program = bibtex
+% !TeX spellcheck = ru_RU
+% !TEX root = talk.tex
+
+\documentclass
+  [ russian
+  , aspectratio=43 % Для защит онлайн лучше использовать разрешение не 4х3
+  ] {beamer}
+
+
+\input{preamble.tex}
+\makeatletter
+
+% ------------------------------------------
+
+\usepackage{xcolor}
+\setbeamercolor{item}{fg=red}
+
+\usepackage{listings}
+\usepackage{listingsutf8}
+
+\usepackage[dvipsnames]{xcolor}
+
+\lstdefinelanguage{ML}{
+  keywords={type, match, with, let, rec, in, fun, function, of, if, then, else},
+  keywordstyle=\color{Maroon}\bfseries,
+  identifierstyle=\color{black},
+  comment=[(*][*)],
+  commentstyle=\color{gray},
+  stringstyle=\color{red},
+}
+
+\lstset{
+    basicstyle=\ttfamily\small
+}
+
+\setmonofont{DejaVu Sans Mono}
+
+% ------------------------------------------
+
+\input{pretitle.tex}
+\input{title.tex}
+
+\newcommand{\academicGroup}{\my@title@group@ru}
+\newcommand{\advisorChair}{\my@title@chair@ru}
+% То, что в квадратных скобках, отображается внизу по центру каждого слайда.
+\title[Добавление ADT в rukaml]{\my@title@title@ru}
+% То, что в квадратных скобках, отображается в левом нижнем углу.
+\author[\my@title@author@ru]{\my@title@author@ru, группа \academicGroup}
+\institute[СПбГУ]{}
+\date[29 декабря 2025 г.]{}
+\newcommand{\supervisor}{\my@title@supervisor@ru}
+\newcommand{\supervisorPosition}{\my@title@supervisorPosition@ru}
+\newcommand{\consultant}{\my@title@consultant@ru}
+\newcommand{\consultantPosition}{\my@title@consultantPosition@ru}
+\newcommand{\reviewer}{\my@title@reviewer@ru}
+\newcommand{\reviewerPosition}{\my@title@reviewerPosition@ru}
+\newcommand{\defenseYear}{\my@title@year@ru}
+
+\makeatother
+\begin{document}
+{
+\setbeamertemplate{footline}{}
+% Лого университета или организации, отображается в шапке титульного листа
+\begin{frame}
+    \includegraphics[width=1.4cm]{figures/SPbGU_Logo.png}
+    \vspace{-35pt}
+    \hspace{-10pt}
+    \begin{center}
+        \begin{tabular}{c}
+            \scriptsize{Санкт-Петербургский государственный университет} \\
+            \scriptsize{\advisorChair}
+        \end{tabular}
+        \titlepage
+    \end{center}
+
+    \btVFill
+
+    {\scriptsize
+        % У научного руководителя должна быть указана научная степень
+        \textbf{Научный руководитель:}  \supervisorPosition~\supervisor \\
+        % Консультанта может и не быть. Должна быть указана должность или ученая степень
+
+        % Для учебной практики не обязателен. Должна быть указана должность или ученая степень
+
+        % TODO: добавить условие на включение рецензента в зависимости от вида отчета
+    }
+    \makeatother
+    \begin{center}
+        \vspace{5pt}
+        \scriptsize{Санкт-Петербург\\ \defenseYear}
+    \end{center}
+\end{frame}
+}
+
+% Обязательный слайд: четкая формулировка цели данной работы и постановка задачи
+% Описание выносимых на защиту результатов, процесса или особенностей их достижения и т.д.
+\begin{frame}
+    \frametitle{Постановка задачи}
+    \textbf{Целью} работы является реализация поддержки алгебраических типов данных и паттерн-матчинга выражений в rukaml
+    \vspace{1em}
+
+    \textbf{Задачи}:
+    \begin{itemize}
+        \item Добавить в парсер обработку новых конструкций
+        \item Добавить поддержку списков как частного случая ADT в качестве built-in типа
+        \item Изменить окружение тайпчекера таким образом, чтобы можно было выводить ADT
+        \item Написать порождение кода для значений алгебраических типов
+    \end{itemize}
+\end{frame}
+
+%Идеально, если есть по одному слайду на каждую поставленную задачу
+
+\begin{frame}[fragile]
+    \frametitle{Новые конструкции}
+    Объявления алгебраических типов данных и их конструкторы
+
+    {
+    \begin{lstlisting}[language=ML]
+    type ('a1, ..., 'aN) type_name =
+      | Constructor_name1 of ...
+      | Constructor_name2 of ...
+      | ...
+      | Constructor_nameM of ...
+    \end{lstlisting}
+
+    Сопоставление с образцом
+    \begin{lstlisting}[language=ML]
+    match expression with
+    | pattern1 -> expression1
+    | pattern2 -> expression2
+    | ...
+    | patternN -> expressionN
+    \end{lstlisting}
+
+    }
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Списки}
+
+    Синтаксический сахар для конструкторов и их обработка в pretty-printer'ах
+    \begin{lstlisting}[language=ML]
+    x :: [ a; b; c ]
+
+    let rec take n ls =
+      match ls with
+      | [] -> []
+      | x :: xs ->
+        if n < 1 then [] else x :: take (n - 1) xs
+    \end{lstlisting}
+
+    В начальном окружении тайпчекера описываются встроенные типы и их конструкторы, в том числе список
+    \begin{lstlisting}[language=ML]
+
+    let typ_list : type_declaration = ...
+    let constr_nil : constructor_info = ...
+    let constr_cons : constructor_info = ...
+    \end{lstlisting}
+\end{frame}
+
+
+\begin{frame}
+    \frametitle{Вывод типов}
+    Нужно научить тайпчекер
+    \begin{itemize}
+        \item Проверять, что используемые типы уже были объявлены
+        \item Проверять, что ожидаемый тип аргумента конструктора унифицируется с передаваемым
+        \item По имени конструктора находить тип, в рамках которого он был объявлен и унифицировать его полиморфные параметры
+    \end{itemize}
+
+
+    Реализовано набором словарей, поддерживаемым при выводе типов:
+    \begin{itemize}
+        \item Объявленные типы (\texttt\small{list, map, option})
+        \item Объявленные конструкторы (\texttt\small{Cons, Nil, Some, None})
+        \item Схемы типов объявленных значений
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]
+    \frametitle{Пример типизации ADT}
+    \begin{lstlisting}[language=ML]
+$ run << EOF
+> type 'a option =
+>   | Some of 'a
+>   | None
+>
+> let rec find p ls =
+>   match ls with
+>   | [] -> None
+>   | x :: xs -> if p x then Some x else find p xs
+
+type '_0 option =
+  | Some of '_0
+  | None
+
+let rec find: ('_4 -> bool) -> '_4 list -> '_4 option
+		\end{lstlisting}
+\end{frame}
+
+
+\begin{frame}[fragile]
+    \frametitle{Дальнейшная обработка match и конструкторов}
+
+    \begin{itemize}
+        \item Для каждого конструктора добавляется уникальный в рамках типа тег
+        \item  \texttt\small{match-with} разворачивается в \texttt\small{if-then-else}
+        \item При сопоставлении с образцом сначала сравнивается тег конструктора, затем его аргументы
+
+
+    \end{itemize}
+    \begin{lstlisting}[language=ML]
+    $ run << EOF
+    > let is_empty ls =
+    >   match ls with
+    >   | [] -> true
+    >   | _ -> false
+
+    let is_empty ls =
+      let temp1 = ls in
+      let temp2 = get_tag temp1 in
+        (if (temp2 = 0)
+          then true
+          else false)
+    \end{lstlisting}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Порождение кода}
+    \begin{itemize}
+        \item Значения алгебраических типов представляются как блоки переменного размера в куче
+
+        \item Хранится заголовок с тегом и арностью, после него размещаются аргументы конструктора
+
+        \item Аллокация, обращение к полям заголовка и аргументам конструктора реализованы на языке C
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Пример, проходящий все стадии компиляции}
+
+    \begin{lstlisting}[language=ML]
+let rec map f ls =
+  match ls with
+  | [] -> []
+  | x :: xs -> f x :: map f xs
+
+let rec print_int_list ls =
+  match ls with
+    | [] -> 0
+    | x :: xs ->
+      let t = print x in
+        print_int_list xs
+
+let pow2 x = x * x
+
+let main = print_int_list (map pow2 [ 1; 2; 3; 4; 5 ])
+    \end{lstlisting}
+
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Тестирование}
+    \begin{itemize}
+        \item cram тесты dune
+              \begin{itemize}
+                  \item Для деревьев пишутся pretty-printer'ы
+                  \item Модуль компилятора или сообщает об ошибке, или человеко-проверяемо печатает дерево
+              \end{itemize}
+        \item Процент покрытия измеряется с помощью утилиты \texttt\small{bisect\_ppx}
+        \item В основном тестировались самописные реализации функций \texttt\small{Stdlib.List}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Что ещё можно сделать}
+    \begin{itemize}
+        \item CPS convertion для \texttt\small{match-with} и конструкторов
+        \item Преобразование \texttt\small{match-with} в деревья выбора или автоматы с возвратами
+        \item Проверка полноты и неизбыточности паттерн-матчинга
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Результаты}
+    \begin{itemize}
+        \item Окружение тайпчекера переработано для поддержки ADT
+        \item Парсятся и тайпчекаются объявления типов, \texttt\small{match-with} и конструкторы ADT
+        \item Добавлен сахар для конструкторов списков, их отдельная обработка в pretty-printer'ах и явное описание \texttt\small{TypeList} в \texttt\small{typedtree}
+        \item Написан кодген \texttt\small{amd64} для значений алгебраических типов
+    \end{itemize}
+\end{frame}
+
+\end{document}
