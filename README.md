@@ -1,1 +1,1 @@
-# third-sem-practice
+3rd semester practicum materials at SPbU SE
